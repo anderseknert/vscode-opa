@@ -8,7 +8,6 @@ import {
     LanguageClientOptions,
     ServerOptions,
     CloseAction,
-    integer,
 } from 'vscode-languageclient/node';
 import * as vscode from 'vscode';
 import * as semver from 'semver';
@@ -204,8 +203,6 @@ export function activateRegal(_context: ExtensionContext) {
         clientOptions
     );
 
-    const activeDecorations: { [line: integer]: vscode.DecorationOptions; } = {};
-
     client.onRequest('regal/showEvalResult', (params) => {
         const activeEditor = vscode.window.activeTextEditor;
         if (!activeEditor) {
@@ -215,11 +212,13 @@ export function activateRegal(_context: ExtensionContext) {
         const line = params.line - 1;
 
         const endOfLine = new vscode.Range(
-            new vscode.Position(line, activeEditor.document.lineAt(line).text.length),
+            // where these numbers the same to make the hover range small?
+            // I have made it the whole line
+            new vscode.Position(line, 0),
             new vscode.Position(line, activeEditor.document.lineAt(line).text.length),
         )
 
-        var value = params.result.value
+        let value = params.result.value
         if (params.result.isUndefined) {
             value = 'undefined'
         } else {
@@ -234,18 +233,20 @@ export function activateRegal(_context: ExtensionContext) {
 
         const decorationOption: vscode.DecorationOptions = {
             range: endOfLine,
-            hoverMessage: 'Evaluated to ' + value,
+            // make this blank, so that we only see the result in the decoration attachment?
+            // hoverMessage: 'Evaluated to ' + value,
             renderOptions: {
                 after: {
                     contentText: " => " + value,
-                    color: 'rgba(255, 255, 255, 0.5)',
+                    // made this match the color of the line numbers
+                    color: new vscode.ThemeColor('editorLineNumber.foreground'),
                 },
             },
         }
 
-        activeDecorations[line] = decorationOption
-
-        activeEditor.setDecorations(evalResultDecorationType, Object.values(activeDecorations))
+        // i have skipped activeDecorations and made it so that only the
+        // most recent evaluation is shown?
+        activeEditor.setDecorations(evalResultDecorationType, [decorationOption]);
     })
 
     client.start();
